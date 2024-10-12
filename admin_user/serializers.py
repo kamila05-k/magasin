@@ -11,14 +11,7 @@ class AdminRegistrationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CustomUser
-        fields = [
-            'first_name',
-            'last_name',
-            'email',
-            'password',
-            'confirm_password',
-            'phone_number',
-        ]
+        fields = '__all__'
 
     def validate(self, data):
         """Проверка, что пароли совпадают"""
@@ -38,7 +31,6 @@ class AdminRegistrationSerializer(serializers.ModelSerializer):
         )
         return user
 
-
 class UserLoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField(style={'input_type': 'password'})
@@ -52,14 +44,11 @@ class UserLoginSerializer(serializers.Serializer):
             raise serializers.ValidationError("Неверный логин или пароль.")
         return {'user': user}
 
-
 class ResetPasswordSerializer(serializers.Serializer):
     email = serializers.EmailField()
 
-
 class ResetPasswordVerifySerializer(serializers.Serializer):
     reset_code = serializers.CharField(max_length=100)
-
 
 class ActivationCodeSerializer(serializers.Serializer):
     activation_code = serializers.CharField(max_length=4)

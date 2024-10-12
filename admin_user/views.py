@@ -31,12 +31,9 @@ import logging
 logger = logging.getLogger(__name__)
 
 User = get_user_model()
-
-
 def generate_activation_code():
     """Генерирует случайный код активации, состоящий только из цифр, длиной 4 символа."""
     return ''.join(random.choices(string.digits, k=4))
-
 
 class AdminRegistrationView(generics.CreateAPIView):
     """View для регистрации нового администратора."""
@@ -379,7 +376,6 @@ class ResenActivationCodeView(generics.GenericAPIView):
 class ChangePasswordView(generics.GenericAPIView):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = ChangePasswordSerializer
-
     def post(self, request):
         user = request.user
         serializer = ChangePasswordSerializer(data=request.data)
