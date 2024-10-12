@@ -1,22 +1,16 @@
 from datetime import timedelta
 from time import timezone
-
+from django.core.mail import BadHeaderError
 from django.contrib.auth.password_validation import validate_password
-from django.db import IntegrityError
-from rest_framework.authtoken.models import Token
 from rest_framework import status, generics, permissions
 from rest_framework.generics import get_object_or_404
+from rest_framework.parsers import MultiPartParser, JSONParser
 from rest_framework.response import Response
-from .serializers import (
-    AdminRegistrationSerializer,
-    UserLoginSerializer,
-    ResetPasswordSerializer,
-    ResetPasswordVerifySerializer,
-    ChangePasswordSerializer, ActivationCodeSerializer
-)
+from .serializers import *
 import random
 import string
 import re
+from django.utils import timezone
 import logging
 from .models import CustomUser
 from django.core.mail import send_mail
@@ -47,6 +41,7 @@ def generate_activation_code():
 class AdminRegistrationView(generics.CreateAPIView):
     """View для регистрации нового администратора."""
     serializer_class = AdminRegistrationSerializer
+    permission_classes = [permissions.AllowAny]
 
     def post(self, request, *args, **kwargs):
         logger.debug(f"Registration request data: {request.data}")
@@ -136,7 +131,6 @@ def activate_admin(email):
     except User.DoesNotExist:
         print(f"Пользователь с email {email} не найден.")
 
-
 class ActivationAPIView(generics.GenericAPIView):
     serializer_class = ActivationCodeSerializer
 
@@ -151,8 +145,7 @@ class ActivationAPIView(generics.GenericAPIView):
             user = get_object_or_404(CustomUser, activation_code=activation_code)
 
             # Проверка срока действия кода (1 час)
-            if user.activation_code_created_at and timezone.now() > user.activation_code_created_at + timedelta(
-                    hours=1):
+            if user.activation_code_created_at and timezone.now() > user.activation_code_created_at + timedelta(hours=1):
                 return Response({
                     'response': False,
                     'message': _('Срок действия кода активации истек.')
@@ -174,7 +167,6 @@ class ActivationAPIView(generics.GenericAPIView):
                 'response': False,
                 'message': _('Ошибка активации.')
             }, status=status.HTTP_400_BAD_REQUEST)
-
 
 class UserLoginView(generics.CreateAPIView):
     """Аутентификация пользователя."""
@@ -281,3 +273,105 @@ class ResetPasswordVerifyView(generics.GenericAPIView):
                 'response': False,
                 'message': _('Произошла ошибка при сбросе пароля.')
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class ResendActivationCodeView(generics.GenericAPIView):
+    """Повторная отправка кода активации на email."""
+    serializer_class = ResendActivationCodeSerializer
+    parser_classes = [JSONParser, MultiPartParser]
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data['email']
+
+        try:
+            user = CustomUser.objects.get(email=email)
+            # Генерация нового кода активации
+            activation_code = generate_activation_code()
+            user.activation_code = activation_code
+            user.activation_code_created_at = timezone.now()
+            user.save()
+
+            message = (
+                f"Здравствуйте, {user.email}!\n\n"
+                f"<p>{_('Ваш новый код активации')}: {activation_code}</p>"
+                f"<p>{_('С наилучшими пожеланиями')},<br>{_('Команда')} {settings.BASE_URL}</p>"
+            )
+
+            try:
+                send_mail(
+                    _('Активация вашего аккаунта'),
+                    '',
+                    settings.DEFAULT_FROM_EMAIL,
+                    [user.email],
+                    fail_silently=False,
+                    html_message=message,
+                )
+            except BadHeaderError:
+                return Response({
+                    'response': False,
+                    'message': _('Ошибка при отправке письма. Попробуйте еще раз позже.')
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+            return Response({
+                'response': True,
+                'message': _('Новый код активации был отправлен на ваш email.')
+            })
+
+        except CustomUser.DoesNotExist:
+            return Response({
+                'response': False,
+                'message': _('Пользователь с этим адресом электронной почты не найден.')
+            }, status=status.HTTP_404_NOT_FOUND)
+
+class ResenActivationCodeView(generics.GenericAPIView):
+    """Повторная отправка кода активации на email."""
+    serializer_class = ResendActivationCodeSerializer
+    parser_classes = [JSONParser, MultiPartParser]
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data['email']
+
+        try:
+            user = CustomUser.objects.get(email=email)
+            # Генерация нового кода восстановления пароля
+            reset_code = generate_activation_code()  # Изменено на reset_code
+            user.reset_code = reset_code
+            user.reset_code_created_at = timezone.now()
+            user.save()
+
+            message = (
+                f"Здравствуйте, {user.email}!\n\n"
+                f"<p>{_('Ваш код для восстановления пароля')}: {reset_code}</p>"  # Сообщение для восстановления пароля
+                f"<p>{_('С наилучшими пожеланиями')},<br>{_('Команда')} {settings.BASE_URL}</p>"
+            )
+
+            try:
+                send_mail(
+                    _('Восстановление пароля'),
+                    '',  # Пустое тело, так как мы используем html_message
+                    settings.DEFAULT_FROM_EMAIL,
+                    [user.email],
+                    fail_silently=False,
+                    html_message=message,
+                )
+
+            except BadHeaderError:
+                return Response({
+                    'response': False,
+                    'message': _('Ошибка при отправке письма. Попробуйте еще раз позже.')
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+            return Response({
+                'response': True,
+                'message': _('Новый код для восстановления пароля был отправлен на ваш email.')
+            })
+
+        except CustomUser.DoesNotExist:
+            return Response({
+                'response': False,
+                'message': _('Пользователь с этим адресом электронной почты не найден.')
+            }, status=status.HTTP_404_NOT_FOUND)

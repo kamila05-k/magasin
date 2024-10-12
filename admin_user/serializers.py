@@ -71,3 +71,6 @@ class ChangePasswordSerializer(serializers.Serializer):
         return attrs
 class ActivationCodeSerializer(serializers.Serializer):
     activation_code = serializers.CharField(max_length=4)
+
+class ResendActivationCodeSerializer(serializers.Serializer):
+    email = serializers.EmailField()
