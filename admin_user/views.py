@@ -375,3 +375,27 @@ class ResenActivationCodeView(generics.GenericAPIView):
                 'response': False,
                 'message': _('Пользователь с этим адресом электронной почты не найден.')
             }, status=status.HTTP_404_NOT_FOUND)
+
+class ChangePasswordView(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = ChangePasswordSerializer
+
+    def post(self, request):
+        user = request.user
+        serializer = ChangePasswordSerializer(data=request.data)
+
+        if serializer.is_valid():
+            old_password = serializer.validated_data['old_password']
+            new_password = serializer.validated_data['new_password']
+
+            # Проверка старого пароля
+            if not user.check_password(old_password):
+                return Response({'error': 'Неверный старый пароль.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Установка нового пароля
+            user.set_password(new_password)
+            user.save()
+
+            return Response({'success': 'Пароль успешно изменен.'}, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

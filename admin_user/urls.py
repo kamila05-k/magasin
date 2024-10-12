@@ -8,4 +8,6 @@ urlpatterns = [ # Включаем маршруты из роутера
     path('reset-password-verify/', ResetPasswordVerifyView.as_view(), name='reset_password_verify'),
     path('resend-activation-code/', ResendActivationCodeView.as_view(), name='resend_activation_code'),
     path('resen-password-verify-code/', ResenActivationCodeView.as_view(), name='resend_activation_code'),
+    path('change-password/', ChangePasswordView.as_view(), name='change_password'),
+
 ]

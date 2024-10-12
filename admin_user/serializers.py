@@ -61,16 +61,12 @@ class ResetPasswordVerifySerializer(serializers.Serializer):
     reset_code = serializers.CharField(max_length=100)
 
 
-class ChangePasswordSerializer(serializers.Serializer):
-    new_password = serializers.CharField(required=True, min_length=8)
-    confirm_password = serializers.CharField(required=True, min_length=8)
-
-    def validate(self, attrs):
-        if attrs['new_password'] != attrs['confirm_password']:
-            raise serializers.ValidationError("Пароли не совпадают.")
-        return attrs
 class ActivationCodeSerializer(serializers.Serializer):
     activation_code = serializers.CharField(max_length=4)
 
 class ResendActivationCodeSerializer(serializers.Serializer):
     email = serializers.EmailField()
+
+class ChangePasswordSerializer(serializers.Serializer):
+    old_password = serializers.CharField(required=True)
+    new_password = serializers.CharField(required=True)
