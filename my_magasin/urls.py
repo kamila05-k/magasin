@@ -23,6 +23,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('Product/', include('Product.urls')),
     path('admin_user/',include('admin_user.urls')),
+    path('user_magasin/',include('user_magasin.urls')),
 ]
 urlpatterns += yasg_urls
 if settings.DEBUG:
